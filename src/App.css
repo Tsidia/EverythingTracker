@@ -293,8 +293,32 @@ body {
   opacity: 0.8;
 }
 
-.task-item.not-interactable .drag-handle {
+.task-item.not-interactable .drag-handle,
+.task-item.not-interactable .task-edit-btn {
   display: none;
+}
+
+.task-edit-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: opacity 0.2s, transform 0.3s;
+  flex-shrink: 0;
+}
+
+.task-item:hover .task-edit-btn {
+  opacity: 0.8;
+}
+
+.task-edit-btn:hover {
+  opacity: 1 !important;
+  transform: rotate(60deg);
+  color: var(--accent);
 }
 
 .task-item.not-interactable {
