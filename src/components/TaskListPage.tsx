@@ -110,7 +110,7 @@ export function TaskListPage({ onOpenTimer, onAllComplete, refreshKey }: Props) 
 
   const openEdit = (task: Task, e: React.MouseEvent) => {
     if (!interactable) return;
-    e.preventDefault();
+    e.stopPropagation();
     setEditTask(task);
   };
 
@@ -212,9 +212,15 @@ export function TaskListPage({ onOpenTimer, onAllComplete, refreshKey }: Props) 
               onDragEnd={handleDragEnd}
               onDragOver={e => e.preventDefault()}
               onClick={() => openTimer(task)}
-              onDoubleClick={(e) => openEdit(task, e)}
             >
               <span className="drag-handle" onMouseDown={e => e.stopPropagation()}>⠿</span>
+              <button
+                className="task-edit-btn"
+                onClick={(e) => openEdit(task, e)}
+                aria-label="Edit task"
+              >
+                ⚙
+              </button>
               <button
                 className={`task-check ${task.completed ? 'checked' : ''}`}
                 onClick={(e) => toggleComplete(task.id, e)}
@@ -249,7 +255,7 @@ export function TaskListPage({ onOpenTimer, onAllComplete, refreshKey }: Props) 
 
         {settings.showHints && interactable && (
           <div className="hint-row">
-            Click a task to start its timer · Double-click to edit · Drag <span className="kbd">⠿</span> to reorder
+            Click a task to start its timer · Drag <span className="kbd">⠿</span> to reorder
           </div>
         )}
       </div>
