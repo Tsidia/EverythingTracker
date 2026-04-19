@@ -11,10 +11,16 @@ interface Props {
 export function EditTaskModal({ task, onSave, onDelete, onClose }: Props) {
   const [name, setName] = useState(task.name);
   const [minutes, setMinutes] = useState(task.minutes);
+  const [meditation, setMeditation] = useState(task.specialTimer === 'meditation');
 
   const handleSave = () => {
     if (!name.trim()) return;
-    onSave({ ...task, name: name.trim(), minutes: Math.max(1, minutes) });
+    onSave({
+      ...task,
+      name: name.trim(),
+      minutes: Math.max(1, minutes),
+      specialTimer: meditation ? 'meditation' : undefined,
+    });
   };
 
   return (
@@ -40,6 +46,14 @@ export function EditTaskModal({ task, onSave, onDelete, onClose }: Props) {
             onKeyDown={e => e.key === 'Enter' && handleSave()}
           />
         </div>
+        <label className="edit-checkbox">
+          <input
+            type="checkbox"
+            checked={meditation}
+            onChange={e => setMeditation(e.target.checked)}
+          />
+          <span>Meditation mode (chime + brown noise)</span>
+        </label>
         <div className="edit-actions">
           <button className="btn btn-primary" onClick={handleSave}>Save</button>
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>

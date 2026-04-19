@@ -10,6 +10,7 @@ function getDefaultTasks(): Task[] {
     { id: crypto.randomUUID(), name: 'Focused work', minutes: 60, completed: false },
     { id: crypto.randomUUID(), name: 'Read', minutes: 20, completed: false },
     { id: crypto.randomUUID(), name: 'Learn something new', minutes: 30, completed: false },
+    { id: crypto.randomUUID(), name: 'Meditate', minutes: 15, completed: false, specialTimer: 'meditation' },
   ];
 }
 

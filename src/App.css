@@ -514,6 +514,21 @@ body {
   border-color: var(--accent);
 }
 
+.edit-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+}
+
+.edit-checkbox input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 .edit-actions {
   display: flex;
   gap: 10px;
