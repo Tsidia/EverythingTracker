@@ -1,10 +1,18 @@
 # EverythingTracker
 
-A small, opinionated daily tracker built around one question: **how much of your day actually went where you wanted it to go?**
-
-It's a single page app. No account, no server, no sync. Your data never leaves your browser.
+A personal command center for tasks, timers, stats and mind-mappable thoughts
 
 Available at: https://tsidia.github.io/EverythingTracker/
+
+---
+
+## Why?
+
+**Give them the middle finger** Do you hate making accounts? Do you hate ads? Do you hate paying subscriptions for features that used to be free? Do you hate having your data stolen, sold and fed into AI? You're gonna love this.
+
+**All your stuff in one place** Forget notepad, timers, productivity trackers, you can plan your whole life from right here.
+
+**Dopamine psychosis** All the dark patterns you'd see in a gatcha. Become addicted to making your life better.
 
 ---
 

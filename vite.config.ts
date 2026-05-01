@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -45,4 +46,9 @@ export default defineConfig({
   // Relative paths so built assets work at any deployment subpath
   // (GitHub Pages under /repo-name/, custom domain root, etc.)
   base: './',
+  test: {
+    environment: 'jsdom',
+    globals: false,
+    include: ['src/**/*.test.{ts,tsx}'],
+  },
 })

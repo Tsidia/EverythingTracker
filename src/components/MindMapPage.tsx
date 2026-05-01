@@ -2,6 +2,9 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import type { MindMapNode, MindMapData } from '../types';
 import { getMindMap, saveMindMap } from '../store';
 import { useSettings } from '../settings';
+import { autoArrangeNodes } from './mindmap/autoArrange';
+import { MindMapToolbar } from './mindmap/MindMapToolbar';
+import { MindMapNodeView } from './mindmap/MindMapNodeView';
 
 // Downscale oversized images client-side so they don't balloon localStorage.
 // Max dimension 600px, output JPEG ~0.82 quality.
@@ -114,69 +117,7 @@ export function MindMapPage() {
   };
 
   const autoArrange = () => {
-    const root = data.nodes.find(n => n.id === 'root');
-    if (!root) return;
-
-    const nodeMap = new Map(data.nodes.map(n => [n.id, n]));
-    const positioned = new Map<string, { x: number; y: number }>();
-    positioned.set('root', { x: 0, y: 0 });
-
-    // Count all descendants (including self) to weight spacing
-    const subtreeSize = (id: string): number => {
-      const children = data.nodes.filter(n => n.parentId === id);
-      if (children.length === 0) return 1;
-      return children.reduce((sum, c) => sum + subtreeSize(c.id), 0);
-    };
-
-    const arrangeChildren = (parentId: string, cx: number, cy: number, startAngle: number, sweep: number, depth: number) => {
-      const children = data.nodes.filter(n => n.parentId === parentId);
-      if (children.length === 0) return;
-
-      const parent = nodeMap.get(parentId)!;
-
-      // Calculate radius: enough to clear parent + largest child with generous padding
-      const maxChildRadius = Math.max(...children.map(c => c.width / 2));
-      const parentRadius = parent.width / 2;
-      const padding = 60 + depth * 20;
-      const minRadius = parentRadius + maxChildRadius + padding;
-
-      // Also ensure siblings don't overlap each other.
-      // For N children spread over `sweep` radians, the chord between adjacent
-      // children at distance R is ~R * (sweep/N). That must exceed the sum of
-      // adjacent radii plus padding.
-      const maxPairWidth = children.length > 1
-        ? Math.max(...children.map(c => c.width)) + 40
-        : 0;
-      const spacingRadius = children.length > 1
-        ? (maxPairWidth * children.length) / (sweep * 0.9)
-        : 0;
-
-      const radius = Math.max(minRadius, spacingRadius);
-
-      // Distribute angles weighted by subtree size so larger branches get more room
-      const weights = children.map(c => subtreeSize(c.id));
-      const totalWeight = weights.reduce((a, b) => a + b, 0);
-
-      let currentAngle = startAngle;
-      children.forEach((child, i) => {
-        const childSweep = (weights[i] / totalWeight) * sweep;
-        const angle = currentAngle + childSweep / 2;
-        const x = cx + Math.cos(angle) * radius;
-        const y = cy + Math.sin(angle) * radius;
-        positioned.set(child.id, { x, y });
-        arrangeChildren(child.id, x, y, currentAngle, childSweep, depth + 1);
-        currentAngle += childSweep;
-      });
-    };
-
-    arrangeChildren('root', 0, 0, 0, Math.PI * 2, 0);
-
-    const nodes = data.nodes.map(n => {
-      const pos = positioned.get(n.id);
-      return pos ? { ...n, x: pos.x, y: pos.y } : n;
-    });
-
-    persist({ ...data, nodes });
+    persist({ ...data, nodes: autoArrangeNodes(data.nodes) });
   };
 
   // Pan handlers
@@ -253,11 +194,6 @@ export function MindMapPage() {
     setDragging(id);
   };
 
-  const handleNodeDoubleClick = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingId(id);
-  };
-
   const wrapW = wrapRef.current?.getBoundingClientRect().width || window.innerWidth;
   const wrapH = wrapRef.current?.getBoundingClientRect().height || window.innerHeight - 100;
   const centerX = wrapW / 2;
@@ -265,57 +201,14 @@ export function MindMapPage() {
 
   return (
     <div className="mindmap-page">
-      <div className="mindmap-toolbar">
-        <button className="btn btn-primary" onClick={addChild} disabled={!selectedId}>
-          + Add Child
-        </button>
-        <button className="btn btn-danger" onClick={deleteNode} disabled={!selectedId || selectedId === 'root'}>
-          Delete
-        </button>
-        <button className="btn btn-secondary" onClick={autoArrange}>
-          Auto Arrange
-        </button>
-        <button className="btn btn-secondary" onClick={handleAddImage} disabled={!selectedId}>
-          Add Image
-        </button>
-        <div className="separator" />
-
-        {selected && (
-          <>
-            <label>Color</label>
-            <input
-              type="color"
-              value={selected.color}
-              onChange={e => updateNode(selected.id, { color: e.target.value })}
-            />
-            <label>Text</label>
-            <input
-              type="color"
-              value={selected.textColor}
-              onChange={e => updateNode(selected.id, { textColor: e.target.value })}
-            />
-            <label>Size</label>
-            <input
-              type="range"
-              min={60}
-              max={300}
-              value={selected.width}
-              onChange={e => {
-                const v = parseInt(e.target.value);
-                updateNode(selected.id, { width: v, height: v });
-              }}
-            />
-            <label>Font Size</label>
-            <input
-              type="range"
-              min={10}
-              max={40}
-              value={selected.fontSize}
-              onChange={e => updateNode(selected.id, { fontSize: parseInt(e.target.value) })}
-            />
-          </>
-        )}
-      </div>
+      <MindMapToolbar
+        selected={selected}
+        onAddChild={addChild}
+        onDelete={deleteNode}
+        onAutoArrange={autoArrange}
+        onAddImage={handleAddImage}
+        onUpdateNode={updates => selected && updateNode(selected.id, updates)}
+      />
 
       <div
         className="mindmap-canvas-wrap"
@@ -349,53 +242,20 @@ export function MindMapPage() {
         {data.nodes.map(node => {
           const screenX = (node.x) * data.zoom + data.viewX + centerX - (node.width * data.zoom) / 2;
           const screenY = (node.y) * data.zoom + data.viewY + centerY - (node.height * data.zoom) / 2;
-
           return (
-            <div
+            <MindMapNodeView
               key={node.id}
-              className={`mindmap-node ${node.id === selectedId ? 'selected' : ''}`}
-              style={{
-                left: screenX,
-                top: screenY,
-                width: node.width * data.zoom,
-                height: node.height * data.zoom,
-                backgroundColor: node.color,
-                color: node.textColor,
-                fontSize: node.fontSize * data.zoom,
-              }}
+              node={node}
+              isSelected={node.id === selectedId}
+              isEditing={editingId === node.id}
+              zoom={data.zoom}
+              screenX={screenX}
+              screenY={screenY}
               onMouseDown={e => handleNodeMouseDown(node.id, e)}
-              onDoubleClick={e => handleNodeDoubleClick(node.id, e)}
-            >
-              {node.imageUrl && (
-                <img
-                  src={node.imageUrl}
-                  alt=""
-                  className="mindmap-node-bg-img"
-                  style={{ objectFit: node.imageFit || 'cover' }}
-                />
-              )}
-              <div className="mindmap-node-text">
-                {editingId === node.id ? (
-                  <textarea
-                    className="mindmap-text-edit"
-                    value={node.text}
-                    onChange={e => updateNode(node.id, { text: e.target.value })}
-                    onBlur={() => setEditingId(null)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        setEditingId(null);
-                      }
-                    }}
-                    autoFocus
-                    rows={3}
-                    style={{ fontSize: node.fontSize * data.zoom }}
-                  />
-                ) : (
-                  node.text
-                )}
-              </div>
-            </div>
+              onDoubleClick={e => { e.stopPropagation(); setEditingId(node.id); }}
+              onTextChange={text => updateNode(node.id, { text })}
+              onEditEnd={() => setEditingId(null)}
+            />
           );
         })}
       </div>
