@@ -38,20 +38,31 @@ export function autoArrangeNodes(nodes: MindMapNode[]): MindMapNode[] {
     const padding = 60 + depth * 20;
     const minRadius = parentRadius + maxChildRadius + padding;
 
-    // Independently, ensure adjacent siblings don't overlap. For N children
-    // spread over `sweep` radians, the chord between neighbors at distance R
-    // is ~R * (sweep/N), which must exceed adjacent widths plus padding.
-    const maxPairWidth = children.length > 1
-      ? Math.max(...children.map(c => c.width)) + 40
-      : 0;
-    const spacingRadius = children.length > 1
-      ? (maxPairWidth * children.length) / (sweep * 0.9)
-      : 0;
-
-    const radius = Math.max(minRadius, spacingRadius);
-
     const weights = children.map(c => subtreeSize(c.id));
     const totalWeight = weights.reduce((a, b) => a + b, 0);
+
+    // Each adjacent pair gets its own required radius. Slices are weighted by
+    // subtree size, not width, so a wide leaf can land in a tiny slice; the
+    // chord between two centers separated by Δθ at radius R is 2R·sin(Δθ/2),
+    // which must exceed each pair's actual half-widths plus padding.
+    const pairPadding = 40;
+    const childSweeps = weights.map(w => (w / totalWeight) * sweep);
+    const fullCircle = sweep >= Math.PI * 2 - 1e-9;
+    let spacingRadius = 0;
+    const requiredRadius = (i: number, j: number) => {
+      const gap = (childSweeps[i] + childSweeps[j]) / 2;
+      const chord = (children[i].width + children[j].width) / 2 + pairPadding;
+      const sinHalf = Math.sin(gap / 2);
+      return sinHalf > 0 ? chord / (2 * sinHalf) : Infinity;
+    };
+    for (let i = 0; i < children.length - 1; i++) {
+      spacingRadius = Math.max(spacingRadius, requiredRadius(i, i + 1));
+    }
+    if (fullCircle && children.length > 1) {
+      spacingRadius = Math.max(spacingRadius, requiredRadius(children.length - 1, 0));
+    }
+
+    const radius = Math.max(minRadius, spacingRadius);
 
     let currentAngle = startAngle;
     children.forEach((child, i) => {
